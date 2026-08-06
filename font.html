@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ابزار تبدیل فونت‌های یونیکد</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Vazir', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 25px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .input-area {
+            margin-bottom: 25px;
+        }
+
+        .input-area label {
+            display: block;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .input-area textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 18px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.3s;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .input-area textarea:focus {
+            outline: none;
+            border-color: #f5576c;
+        }
+
+        .font-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .font-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            position: relative;
+        }
+
+        .font-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            border-color: #f5576c;
+        }
+
+        .font-card.active {
+            border-color: #f5576c;
+            background: #fff0f2;
+            box-shadow: 0 5px 20px rgba(245, 87, 108, 0.2);
+        }
+
+        .font-card .preview {
+            font-size: 22px;
+            margin-bottom: 8px;
+            word-break: break-all;
+            min-height: 35px;
+        }
+
+        .font-card .font-name {
+            font-size: 12px;
+            color: #888;
+            background: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .font-card .copy-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #f5576c;
+            color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .font-card.active .copy-badge {
+            display: flex;
+        }
+
+        .output-area {
+            margin-top: 25px;
+            border-top: 2px solid #f0f0f0;
+            padding-top: 25px;
+        }
+
+        .output-area label {
+            display: block;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .output-box {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+
+        .output-box textarea {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 22px;
+            resize: vertical;
+            min-height: 80px;
+            direction: ltr;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        .output-box textarea:focus {
+            outline: none;
+            border-color: #f5576c;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: scale(1.05);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #43e97b, #38f9d7);
+            color: #333;
+        }
+
+        .btn-success:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(67, 233, 123, 0.4);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+            z-index: 1000;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 15px 0;
+            font-size: 13px;
+            color: #888;
+        }
+
+        .stats span {
+            background: #f8f9fa;
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            .font-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            .output-box {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>✨ ابزار تبدیل فونت</h1>
+        <p class="subtitle">متن خود را تایپ کنید و از بین فونت‌های مختلف انتخاب کنید</p>
+
+        <div class="input-area">
+            <label>📝 متن خود را وارد کنید:</label>
+            <textarea id="inputText" placeholder="مثال: Hello World یا سلام دنیا">𝓯𝓲𝓷𝓲𝓼𝓱</textarea>
+        </div>
+
+        <div class="stats">
+            <span>📊 طول متن: <strong id="charCount">0</strong> کاراکتر</span>
+            <span>🔤 کلمات: <strong id="wordCount">0</strong></span>
+        </div>
+
+        <div class="font-grid" id="fontGrid">
+            <!-- فونت‌ها توسط جاوااسکریپت ساخته می‌شوند -->
+        </div>
+
+        <div class="output-area">
+            <label>📋 خروجی انتخاب‌شده:</label>
+            <div class="output-box">
+                <textarea id="outputText" readonly></textarea>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="copyOutput()">📋 کپی کردن</button>
+                <button class="btn btn-primary" onclick="downloadOutput()">⬇️ دانلود فایل</button>
+                <button class="btn btn-secondary" onclick="clearAll()">🗑️ پاک کردن</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ============ دیکشنری فونت‌های یونیکد ============
+        const fontStyles = {
+            '𝓑𝓸𝓵𝓭 𝓢𝓬𝓻𝓲𝓹𝓽': {
+                name: 'Bold Script',
+                letters: {
+                    'a': '𝓪', 'b': '𝓫', 'c': '𝓬', 'd': '𝓭', 'e': '𝓮', 'f': '𝓯', 'g': '𝓰', 'h': '𝓱',
+                    'i': '𝓲', 'j': '𝓳', 'k': '𝓴', 'l': '𝓵', 'm': '𝓶', 'n': '𝓷', 'o': '𝓸', 'p': '𝓹',
+                    'q': '𝓺', 'r': '𝓻', 's': '𝓼', 't': '𝓽', 'u': '𝓾', 'v': '𝓿', 'w': '𝔀', 'x': '𝔁',
+                    'y': '𝔂', 'z': '𝔃',
+                    'A': '𝓐', 'B': '𝓑', 'C': '𝓒', 'D': '𝓓', 'E': '𝓔', 'F': '𝓕', 'G': '𝓖', 'H': '𝓗',
+                    'I': '𝓘', 'J': '𝓙', 'K': '𝓚', 'L': '𝓛', 'M': '𝓜', 'N': '𝓝', 'O': '𝓞', 'P': '𝓟',
+                    'Q': '𝓠', 'R': '𝓡', 'S': '𝓢', 'T': '𝓣', 'U': '𝓤', 'V': '𝓥', 'W': '𝓦', 'X': '𝓧',
+                    'Y': '𝓨', 'Z': '𝓩'
+                }
+            },
+            '𝕭𝖔𝖑𝖉 𝕱𝖗𝖆𝖐𝖙𝖚𝖗': {
+                name: 'Bold Fraktur',
+                letters: {
+                    'a': '𝖆', 'b': '𝖇', 'c': '𝖈', 'd': '𝖉', 'e': '𝖊', 'f': '𝖋', 'g': '𝖌', 'h': '𝖍',
+                    'i': '𝖎', 'j': '𝖏', 'k': '𝖐', 'l': '𝖑', 'm': '𝖒', 'n': '𝖓', 'o': '𝖔', 'p': '𝖕',
+                    'q': '𝖖', 'r': '𝖗', 's': '𝖘', 't': '𝖙', 'u': '𝖚', 'v': '𝖛', 'w': '𝖜', 'x': '𝖝',
+                    'y': '𝖞', 'z': '𝖟',
+                    'A': '𝕬', 'B': '𝕭', 'C': '𝕮', 'D': '𝕯', 'E': '𝕰', 'F': '𝕱', 'G': '𝕲', 'H': '𝕳',
+                    'I': '𝕴', 'J': '𝕵', 'K': '𝕶', 'L': '𝕷', 'M': '𝕸', 'N': '𝕹', 'O': '𝕺', 'P': '𝕻',
+                    'Q': '𝕼', 'R': '𝕽', 'S': '𝕾', 'T': '𝕿', 'U': '𝖀', 'V': '𝖁', 'W': '𝖂', 'X': '𝖃',
+                    'Y': '𝖄', 'Z': '𝖅'
+                }
+            },
+            '𝗕𝗼𝗹𝗱 𝗦𝗮𝗻𝘀': {
+                name: 'Bold Sans',
+                letters: {
+                    'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵',
+                    'i': '𝗶', 'j': '𝗷', 'k': '𝗸', 'l': '𝗹', 'm': '𝗺', 'n': '𝗻', 'o': '𝗼', 'p': '𝗽',
+                    'q': '𝗾', 'r': '𝗿', 's': '𝘀', 't': '𝘁', 'u': '𝘂', 'v': '𝘃', 'w': '𝘄', 'x': '𝘅',
+                    'y': '𝘆', 'z': '𝘇',
+                    'A': '𝗔', 'B': '𝗕', 'C': '𝗖', 'D': '𝗗', 'E': '𝗘', 'F': '𝗙', 'G': '𝗚', 'H': '𝗛',
+                    'I': '𝗜', 'J': '𝗝', 'K': '𝗞', 'L': '𝗟', 'M': '𝗠', 'N': '𝗡', 'O': '𝗢', 'P': '𝗣',
+                    'Q': '𝗤', 'R': '𝗥', 'S': '𝗦', 'T': '𝗧', 'U': '𝗨', 'V': '𝗩', 'W': '𝗪', 'X': '𝗫',
+                    'Y': '𝗬', 'Z': '𝗭'
+                }
+            },
+            '𝙄𝙩𝙖𝙡𝙞𝙘 𝙎𝙖𝙣𝙨': {
+                name: 'Italic Sans',
+                letters: {
+                    'a': '𝙖', 'b': '𝙗', 'c': '𝙘', 'd': '𝙙', 'e': '𝙚', 'f': '𝙛', 'g': '𝙜', 'h': '𝙝',
+                    'i': '𝙞', 'j': '𝙟', 'k': '𝙠', 'l': '𝙡', 'm': '𝙢', 'n': '𝙣', 'o': '𝙤', 'p': '𝙥',
+                    'q': '𝙦', 'r': '𝙧', 's': '𝙨', 't': '𝙩', 'u': '𝙪', 'v': '𝙫', 'w': '𝙬', 'x': '𝙭',
+                    'y': '𝙮', 'z': '𝙯',
+                    'A': '𝘼', 'B': '𝘽', 'C': '𝘾', 'D': '𝘿', 'E': '𝙀', 'F': '𝙁', 'G': '𝙂', 'H': '𝙃',
+                    'I': '𝙄', 'J': '𝙅', 'K': '𝙆', 'L': '𝙇', 'M': '𝙈', 'N': '𝙉', 'O': '𝙊', 'P': '𝙋',
+                    'Q': '𝙌', 'R': '𝙍', 'S': '𝙎', 'T': '𝙏', 'U': '𝙐', 'V': '𝙑', 'W': '𝙒', 'X': '𝙓',
+                    'Y': '𝙔', 'Z': '𝙕'
+                }
+            },
+            '𝒮𝒸𝓇𝒾𝓅𝓉': {
+                name: 'Script',
+                letters: {
+                    'a': '𝒶', 'b': '𝒷', 'c': '𝒸', 'd': '𝒹', 'e': 'ℯ', 'f': '𝒻', 'g': 'ℊ', 'h': '𝒽',
+                    'i': '𝒾', 'j': '𝒿', 'k': '𝓀', 'l': '𝓁', 'm': '𝓂', 'n': '𝓃', 'o': 'ℴ', 'p': '𝓅',
+                    'q': '𝓆', 'r': '𝓇', 's': '𝓈', 't': '𝓉', 'u': '𝓊', 'v': '𝓋', 'w': '𝓌', 'x': '𝓍',
+                    'y': '𝓎', 'z': '𝓏',
+                    'A': '𝒜', 'B': 'ℬ', 'C': '𝒞', 'D': '𝒟', 'E': 'ℰ', 'F': 'ℱ', 'G': '𝒢', 'H': 'ℋ',
+                    'I': 'ℐ', 'J': '𝒥', 'K': '𝒦', 'L': 'ℒ', 'M': 'ℳ', 'N': '𝒩', 'O': '𝒪', 'P': '𝒫',
+                    'Q': '𝒬', 'R': 'ℛ', 'S': '𝒮', 'T': '𝒯', 'U': '𝒰', 'V': '𝒱', 'W': '𝒲', 'X': '𝒳',
+                    'Y': '𝒴', 'Z': '𝒵'
+                }
+            },
+            '𝕄𝕠𝕟𝕠𝕤𝕡𝕒𝕔𝕖': {
+                name: 'Monospace',
+                letters: {
+                    'a': '𝚊', 'b': '𝚋', 'c': '𝚌', 'd': '𝚍', 'e': '𝚎', 'f': '𝚏', 'g': '𝚐', 'h': '𝚑',
+                    'i': '𝚒', 'j': '𝚓', 'k': '𝚔', 'l': '𝚕', 'm': '𝚖', 'n': '𝚗', 'o': '𝚘', 'p': '𝚙',
+                    'q': '𝚚', 'r': '𝚛', 's': '𝚜', 't': '𝚝', 'u': '𝚞', 'v': '𝚟', 'w': '𝚠', 'x': '𝚡',
+                    'y': '𝚢', 'z': '𝚣',
+                    'A': '𝙰', 'B': '𝙱', 'C': '𝙲', 'D': '𝙳', 'E': '𝙴', 'F': '𝙵', 'G': '𝙶', 'H': '𝙷',
+                    'I': '𝙸', 'J': '𝙹', 'K': '𝙺', 'L': '𝙻', 'M': '𝙼', 'N': '𝙽', 'O': '𝙾', 'P': '𝙿',
+                    'Q': '𝚀', 'R': '𝚁', 'S': '𝚂', 'T': '𝚃', 'U': '𝚄', 'V': '𝚅', 'W': '𝚆', 'X': '𝚇',
+                    'Y': '𝚈', 'Z': '𝚉'
+                }
+            },
+            '🅂🅀🅄🄰🅁🄴': {
+                name: 'Square',
+                letters: {
+                    'a': '🄰', 'b': '🄱', 'c': '🄲', 'd': '🄳', 'e': '🄴', 'f': '🄵', 'g': '🄶', 'h': '🄷',
+                    'i': '🄸', 'j': '🄹', 'k': '🄺', 'l': '🄻', 'm': '🄼', 'n': '🄽', 'o': '🄾', 'p': '🄿',
+                    'q': '🅀', 'r': '🅁', 's': '🅂', 't': '🅃', 'u': '🅄', 'v': '🅅', 'w': '🅆', 'x': '🅇',
+                    'y': '🅈', 'z': '🅉',
+                    'A': '🄰', 'B': '🄱', 'C': '🄲', 'D': '🄳', 'E': '🄴', 'F': '🄵', 'G': '🄶', 'H': '🄷',
+                    'I': '🄸', 'J': '🄹', 'K': '🄺', 'L': '🄻', 'M': '🄼', 'N': '🄽', 'O': '🄾', 'P': '🄿',
+                    'Q': '🅀', 'R': '🅁', 'S': '🅂', 'T': '🅃', 'U': '🅄', 'V': '🅅', 'W': '🅆', 'X': '🅇',
+                    'Y': '🅈', 'Z': '🅉'
+                }
+            },
+            'Ⓒⓘⓡⓒⓛⓔⓓ': {
+                name: 'Circled',
+                letters: {
+                    'a': 'ⓐ', 'b': 'ⓑ', 'c': 'ⓒ', 'd': 'ⓓ', 'e': 'ⓔ', 'f': 'ⓕ', 'g': 'ⓖ', 'h': 'ⓗ',
+                    'i': 'ⓘ', 'j': 'ⓙ', 'k': 'ⓚ', 'l': 'ⓛ', 'm': 'ⓜ', 'n': 'ⓝ', 'o': 'ⓞ', 'p': 'ⓟ',
+                    'q': 'ⓠ', 'r': 'ⓡ', 's': 'ⓢ', 't': 'ⓣ', 'u': 'ⓤ', 'v': 'ⓥ', 'w': 'ⓦ', 'x': 'ⓧ',
+                    'y': 'ⓨ', 'z': 'ⓩ',
+                    'A': 'Ⓐ', 'B': 'Ⓑ', 'C': 'Ⓒ', 'D': 'Ⓓ', 'E': 'Ⓔ', 'F': 'Ⓕ', 'G': 'Ⓖ', 'H': 'Ⓗ',
+                    'I': 'Ⓘ', 'J': 'Ⓙ', 'K': 'Ⓚ', 'L': 'Ⓛ', 'M': 'Ⓜ', 'N': 'Ⓝ', 'O': 'Ⓞ', 'P': 'Ⓟ',
+                    'Q': 'Ⓠ', 'R': 'Ⓡ', 'S': 'Ⓢ', 'T': 'Ⓣ', 'U': 'Ⓤ', 'V': 'Ⓥ', 'W': 'Ⓦ', 'X': 'Ⓧ',
+                    'Y': 'Ⓨ', 'Z': 'Ⓩ'
+                }
+            },
+            '🇵🇦🇷🇪🇳🇹🇭🇪🇸🇮🇸': {
+                name: 'Parenthesis',
+                letters: {
+                    'a': 'ᵃ', 'b': 'ᵇ', 'c': 'ᶜ', 'd': 'ᵈ', 'e': 'ᵉ', 'f': 'ᶠ', 'g': 'ᵍ', 'h': 'ʰ',
+                    'i': 'ⁱ', 'j': 'ʲ', 'k': 'ᵏ', 'l': 'ˡ', 'm': 'ᵐ', 'n': 'ⁿ', 'o': 'ᵒ', 'p': 'ᵖ',
+                    'q': 'ᑫ', 'r': 'ʳ', 's': 'ˢ', 't': 'ᵗ', 'u': 'ᵘ', 'v': 'ᵛ', 'w': 'ʷ', 'x': 'ˣ',
+                    'y': 'ʸ', 'z': 'ᶻ',
+                    'A': 'ᴬ', 'B': 'ᴮ', 'C': 'ᶜ', 'D': 'ᴰ', 'E': 'ᴱ', 'F': 'ᶠ', 'G': 'ᴳ', 'H': 'ᴴ',
+                    'I': 'ᴵ', 'J': 'ᴶ', 'K': 'ᴷ', 'L': 'ᴸ', 'M': 'ᴹ', 'N': 'ᴺ', 'O': 'ᴼ', 'P': 'ᴾ',
+                    'Q': 'ᵠ', 'R': 'ᴿ', 'S': 'ˢ', 'T': 'ᵀ', 'U': 'ᵁ', 'V': 'ᵛ', 'W': 'ᵂ', 'X': 'ˣ',
+                    'Y': 'ʸ', 'Z': 'ᶻ'
+                }
+            }
+        };
+
+        // ============ متغیرها ============
+        let activeFont = null;
+        const inputText = document.getElementById('inputText');
+        const outputText = document.getElementById('outputText');
+        const fontGrid = document.getElementById('fontGrid');
+        const toast = document.getElementById('toast');
+        let toastTimeout = null;
+
+        // ============ ساخت کارت‌های فونت ============
+        function buildFontCards() {
+            fontGrid.innerHTML = '';
+            Object.keys(fontStyles).forEach((key, index) => {
+                const font = fontStyles[key];
+                const card = document.createElement('div');
+                card.className = 'font-card';
+                if (index === 0) card.classList.add('active');
+                
+                const preview = document.createElement('div');
+                preview.className = 'preview';
+                preview.textContent = convertText('𝓯𝓲𝓷𝓲𝓼𝓱', font.letters);
+                
+                const name = document.createElement('div');
+                name.className = 'font-name';
+                name.textContent = font.name;
+                
+                const badge = document.createElement('div');
+                badge.className = 'copy-badge';
+                badge.textContent = '✓';
+                
+                card.appendChild(preview);
+                card.appendChild(name);
+                card.appendChild(badge);
+                
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('.font-card').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    activeFont = font.letters;
+                    updateOutput();
+                    showToast(`✅ فونت "${font.name}" انتخاب شد`);
+                });
+                
+                fontGrid.appendChild(card);
+            });
+            
+            // فعال کردن اولین فونت
+            activeFont = fontStyles[Object.keys(fontStyles)[0]].letters;
+        }
+
+        // ============ تبدیل متن ============
+        function convertText(text, fontMap) {
+            let result = '';
+            for (let char of text) {
+                result += fontMap[char] || char;
+            }
+            return result;
+        }
+
+        // ============ بروزرسانی خروجی ============
+        function updateOutput() {
+            const text = inputText.value || '';
+            if (activeFont) {
+                outputText.value = convertText(text, activeFont);
+            } else {
+                outputText.value = text;
+            }
+            updateStats(text);
+        }
+
+        // ============ بروزرسانی آمار ============
+        function updateStats(text) {
+            document.getElementById('charCount').textContent = text.length;
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            document.getElementById('wordCount').textContent = words;
+        }
+
+        // ============ کپی کردن ============
+        function copyOutput() {
+            const text = outputText.value;
+            if (!text) {
+                showToast('⚠️ متنی برای کپی وجود ندارد!');
+                return;
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('✅ متن با موفقیت کپی شد!');
+            }).catch(() => {
+                // روش جایگزین برای مرورگرهای قدیمی
+                outputText.select();
+                document.execCommand('copy');
+                showToast('✅ متن با موفقیت کپی شد!');
+            });
+        }
+
+        // ============ دانلود فایل ============
+        function downloadOutput() {
+            const text = outputText.value;
+            if (!text) {
+                showToast('⚠️ متنی برای دانلود وجود ندارد!');
+                return;
+            }
+            
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `font-converted-${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('✅ فایل با موفقیت دانلود شد!');
+        }
+
+        // ============ پاک کردن ============
+        function clearAll() {
+            inputText.value = '';
+            outputText.value = '';
+            updateStats('');
+            showToast('🗑️ همه چیز پاک شد!');
+        }
+
+        // ============ نمایش پیام ============
+        function showToast(message) {
+            toast.textContent = message;
+            toast.style.display = 'block';
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2500);
+        }
+
+        // ============ رویدادها ============
+        inputText.addEventListener('input', updateOutput);
+
+        // ============ اجرا ============
+        buildFontCards();
+        updateOutput();
+    </script>
+</body>
+</html>
