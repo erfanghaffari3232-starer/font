@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>میکروفن زنده | Live Mic</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Tahoma;background:#0f172a;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;color:white}
+        .card{background:#1e293b;border-radius:24px;padding:30px;text-align:center;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+        h1{color:#38bdf8;margin-bottom:5px;font-size:1.6rem}
+        p{color:#94a3b8;margin-bottom:20px;font-size:0.85rem}
+        
+        .mic-btn{width:100px;height:100px;border-radius:50%;border:4px solid #38bdf8;background:rgba(56,189,248,0.1);cursor:pointer;font-size:2.5rem;margin:15px auto;transition:0.3s;display:flex;align-items:center;justify-content:center}
+        .mic-btn:hover{background:rgba(56,189,248,0.2);transform:scale(1.05)}
+        .mic-btn.active{border-color:#f87171;background:rgba(248,113,113,0.2);animation:pulse 1.5s infinite}
+        @keyframes pulse{0%,100%{box-shadow:0 0 20px rgba(248,113,113,0.3)}50%{box-shadow:0 0 50px rgba(248,113,113,0.6)}}
+        
+        .status{font-size:1rem;margin:10px 0;color:#4ade80}
+        .volume-bar{width:100%;height:8px;background:#334155;border-radius:5px;overflow:hidden;margin:15px 0}
+        .volume-fill{height:100%;background:#38bdf8;width:0%;transition:width 0.1s}
+        
+        .controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+        button{background:#334155;color:white;border:none;padding:10px 18px;border-radius:10px;cursor:pointer;font-family:Tahoma;font-size:0.85rem;transition:0.3s}
+        button:hover{background:#475569}
+        button.active{background:#38bdf8;color:#000}
+        
+        canvas{width:100%;height:60px;margin-top:10px}
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🎙️ میکروفن زنده</h1>
+    <p>صدا از میکروفن → پخش زنده از اسپیکر</p>
+    
+    <div class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</div>
+    <div class="status" id="status">برای شروع کلیک کن</div>
+    
+    <div class="volume-bar"><div class="volume-fill" id="volumeFill"></div></div>
+    
+    <canvas id="waveCanvas"></canvas>
+    
+    <div class="controls">
+        <button id="echoBtn" onclick="toggleEcho()">🔊 اکو</button>
+        <button onclick="changeVolume(-0.1)">🔉</button>
+        <button onclick="changeVolume(0.1)">🔊</button>
+    </div>
+</div>
+
+<script>
+var audioContext, mediaStream, sourceNode, gainNode, analyserNode;
+var isActive = false, echoOn = false;
+var canvas = document.getElementById('waveCanvas');
+var ctx = canvas.getContext('2d');
+canvas.width = 350; canvas.height = 60;
+
+async function toggleMic() {
+    var btn = document.getElementById('micBtn');
+    var status = document.getElementById('status');
+    
+    if (!isActive) {
+        try {
+            // گرفتن میکروفن
+            mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // راه‌اندازی AudioContext
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // ورودی میکروفن
+            sourceNode = audioContext.createMediaStreamSource(mediaStream);
+            
+            // کنترل صدا
+            gainNode = audioContext.createGain();
+            gainNode.gain.value = 1;
+            
+            // آنالیز صدا
+            analyserNode = audioContext.createAnalyser();
+            analyserNode.fftSize = 256;
+            
+            // اتصال: میکروفن → gain → analyser → اسپیکر
+            sourceNode.connect(gainNode);
+            gainNode.connect(analyserNode);
+            analyserNode.connect(audioContext.destination);
+            
+            isActive = true;
+            btn.classList.add('active');
+            btn.textContent = '🔴';
+            status.textContent = '🎙️ در حال پخش زنده...';
+            
+            drawWave();
+        } catch(e) {
+            status.textContent = '❌ دسترسی به میکروفن رو Allow کن';
+        }
+    } else {
+        // قطع کردن
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(function(t) { t.stop(); });
+        }
+        if (audioContext) {
+            audioContext.close();
+        }
+        
+        isActive = false;
+        btn.classList.remove('active');
+        btn.textContent = '🎤';
+        status.textContent = 'متوقف شد';
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+function toggleEcho() {
+    if (!isActive) return;
+    echoOn = !echoOn;
+    var btn = document.getElementById('echoBtn');
+    btn.classList.toggle('active', echoOn);
+    btn.textContent = echoOn ? '🔊 اکو ON' : '🔊 اکو';
+    
+    if (echoOn) {
+        gainNode.gain.value = 2;
+    } else {
+        gainNode.gain.value = 1;
+    }
+}
+
+function changeVolume(delta) {
+    if (!isActive) return;
+    var newVal = Math.max(0, Math.min(3, gainNode.gain.value + delta));
+    gainNode.gain.value = newVal;
+    document.getElementById('volumeFill').style.width = (newVal / 3) * 100 + '%';
+}
+
+function drawWave() {
+    if (!isActive) return;
+    requestAnimationFrame(drawWave);
+    
+    var bufferLength = analyserNode.frequencyBinCount;
+    var dataArray = new Uint8Array(bufferLength);
+    analyserNode.getByteFrequencyData(dataArray);
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#38bdf8';
+    
+    var barWidth = canvas.width / bufferLength;
+    var x = 0;
+    
+    for (var i = 0; i < bufferLength; i++) {
+        var barHeight = (dataArray[i] / 255) * canvas.height;
+        ctx.fillRect(x, canvas.height - barHeight, barWidth - 1, barHeight);
+        x += barWidth;
+    }
+    
+    // ولوم بار
+    var avg = dataArray.reduce(function(a,b){return a+b},0) / bufferLength;
+    document.getElementById('volumeFill').style.width = (avg/255)*100 + '%';
+}
+</script>
+</body>
+</html>
