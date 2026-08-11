@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>میکروفن زنده حرفه‌ای | Live Mic Pro</title>
+    <style>
+        :root{--primary:#38bdf8;--red:#f87171;--green:#4ade80;--gold:#fbbf24;--dark:#0a0a0f;--card:#1e293b;--border:rgba(255,255,255,0.06);--text:#94a3b8}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Tahoma;background:var(--dark);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:15px;color:white}
+        .app{background:var(--card);border-radius:24px;padding:25px;max-width:450px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);border:1px solid var(--border);text-align:center}
+        
+        h1{color:var(--primary);font-size:1.5rem;margin-bottom:3px}
+        .sub{color:var(--text);font-size:0.8rem;margin-bottom:15px}
+        
+        .mic-ring{width:120px;height:120px;border-radius:50%;border:4px solid var(--primary);margin:0 auto 15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:0.3s;position:relative}
+        .mic-ring:hover{transform:scale(1.05)}
+        .mic-ring.active{border-color:var(--red);animation:glow 1.5s infinite}
+        @keyframes glow{0%,100%{box-shadow:0 0 20px rgba(248,113,113,0.3)}50%{box-shadow:0 0 60px rgba(248,113,113,0.6)}}
+        .mic-ring .icon{font-size:3rem}
+        
+        .status-row{display:flex;justify-content:center;gap:15px;margin-bottom:15px;flex-wrap:wrap}
+        .status-badge{background:rgba(255,255,255,0.05);padding:8px 14px;border-radius:20px;font-size:0.8rem}
+        .status-badge .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:5px}
+        .dot.on{background:var(--green)}.dot.off{background:#666}
+        
+        .wave-canvas{width:100%;height:70px;background:rgba(0,0,0,0.3);border-radius:12px;margin:10px 0}
+        canvas{width:100%;height:100%}
+        
+        .controls-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+        .ctrl-btn{background:rgba(255,255,255,0.05);border:1px solid var(--border);padding:12px;border-radius:12px;cursor:pointer;font-family:Tahoma;font-size:0.8rem;color:white;transition:0.3s;display:flex;align-items:center;justify-content:center;gap:6px}
+        .ctrl-btn:hover{background:rgba(255,255,255,0.1);border-color:var(--primary)}
+        .ctrl-btn.active{background:var(--primary);color:#000;border-color:var(--primary)}
+        .ctrl-btn.red.active{background:var(--red)}
+        .ctrl-btn.green.active{background:var(--green)}
+        
+        .slider-row{display:flex;align-items:center;gap:10px;margin:10px 0}
+        .slider-row label{font-size:0.8rem;color:var(--text);min-width:70px}
+        input[type=range]{flex:1;accent-color:var(--primary);cursor:pointer}
+        .slider-val{font-size:0.8rem;color:var(--primary);min-width:35px}
+        
+        .effects{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+        .fx-btn{background:rgba(255,255,255,0.03);border:1px solid var(--border);padding:10px 6px;border-radius:10px;cursor:pointer;font-family:Tahoma;font-size:0.75rem;color:white;transition:0.3s}
+        .fx-btn:hover{background:rgba(255,255,255,0.08)}
+        .fx-btn.active{background:var(--gold);color:#000;border-color:var(--gold)}
+        
+        .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:8px 18px;border-radius:20px;font-weight:bold;z-index:999;display:none}
+        .toast.show{display:block;animation:toastIn 0.3s}
+        @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-15px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+        
+        .eq-bars{display:flex;gap:3px;justify-content:center;align-items:flex-end;height:60px;margin:8px 0}
+        .eq-bar{width:12px;background:var(--primary);border-radius:3px 3px 0 0;transition:height 0.08s}
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <h1>🎙️ میکروفن زنده Pro</h1>
+    <p class="sub">Live Audio Monitor | Real-time Effects</p>
+    
+    <div class="mic-ring" id="micRing" onclick="toggleMic()">
+        <span class="icon" id="micIcon">🎤</span>
+    </div>
+    
+    <div class="status-row">
+        <span class="status-badge">وضعیت: <span class="dot" id="statusDot"></span> <span id="statusText">آماده</span></span>
+        <span class="status-badge">حجم: <b id="volPercent">0%</b></span>
+    </div>
+    
+    <div class="eq-bars" id="eqBars"></div>
+    
+    <div class="wave-canvas"><canvas id="waveCanvas"></canvas></div>
+    
+    <div class="slider-row">
+        <label>🔊 صدا</label>
+        <input type="range" id="volumeSlider" min="0" max="3" step="0.1" value="1" oninput="updateVolume()">
+        <span class="slider-val" id="volVal">100%</span>
+    </div>
+    
+    <div class="slider-row">
+        <label>🎚️ اکو</label>
+        <input type="range" id="echoSlider" min="0" max="1" step="0.05" value="0" oninput="updateEcho()">
+        <span class="slider-val" id="echoVal">خاموش</span>
+    </div>
+    
+    <div class="controls-grid">
+        <button class="ctrl-btn" id="btnEcho" onclick="toggleEffect('echo')">🔊 اکو</button>
+        <button class="ctrl-btn" id="btnRobot" onclick="toggleEffect('robot')">🤖 ربات</button>
+        <button class="ctrl-btn" id="btnDeep" onclick="toggleEffect('deep')">📢 بم</button>
+        <button class="ctrl-btn" id="btnChipmunk" onclick="toggleEffect('chipmunk')">🐿️ زیر</button>
+    </div>
+    
+    <div class="effects">
+        <button class="fx-btn" onclick="quickFX('normal')">🎵 عادی</button>
+        <button class="fx-btn" onclick="quickFX('concert')">🎸 کنسرت</button>
+        <button class="fx-btn" onclick="quickFX('radio')">📻 رادیو</button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var audioContext, mediaStream, sourceNode, gainNode, analyserNode, echoNode, delayNode;
+var isActive = false;
+var effects = { echo: false, robot: false, deep: false, chipmunk: false };
+var eqBars = [];
+
+// ساخت EQ bar ها
+var eqContainer = document.getElementById('eqBars');
+for (var i = 0; i < 32; i++) {
+    var bar = document.createElement('div');
+    bar.className = 'eq-bar';
+    bar.style.height = '5px';
+    eqContainer.appendChild(bar);
+    eqBars.push(bar);
+}
+
+// Wave canvas
+var waveCanvas = document.getElementById('waveCanvas');
+var waveCtx = waveCanvas.getContext('2d');
+waveCanvas.width = 400; waveCanvas.height = 70;
+
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2000)}
+
+async function toggleMic() {
+    if (!isActive) {
+        try {
+            mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            sourceNode = audioContext.createMediaStreamSource(mediaStream);
+            
+            // گین اصلی
+            gainNode = audioContext.createGain();
+            gainNode.gain.value = 1;
+            
+            // آنالایزر
+            analyserNode = audioContext.createAnalyser();
+            analyserNode.fftSize = 512;
+            
+            // دیلی برای اکو
+            delayNode = audioContext.createDelay(0.5);
+            echoNode = audioContext.createGain();
+            echoNode.gain.value = 0;
+            delayNode.connect(echoNode);
+            echoNode.connect(audioContext.destination);
+            
+            // اتصال: source → gain → analyser → speakers + delay
+            sourceNode.connect(gainNode);
+            gainNode.connect(analyserNode);
+            analyserNode.connect(audioContext.destination);
+            gainNode.connect(delayNode);
+            
+            isActive = true;
+            updateUI();
+            drawWave();
+            drawEQ();
+            showToast('🎙️ پخش زنده شروع شد');
+            
+        } catch(e) {
+            showToast('❌ میکروفن رو Allow کن');
+        }
+    } else {
+        if (mediaStream) mediaStream.getTracks().forEach(function(t){t.stop()});
+        if (audioContext) audioContext.close();
+        isActive = false;
+        updateUI();
+        waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+        eqBars.forEach(function(b){b.style.height='5px'});
+    }
+}
+
+function updateUI() {
+    document.getElementById('micRing').classList.toggle('active', isActive);
+    document.getElementById('micIcon').textContent = isActive ? '🔴' : '🎤';
+    document.getElementById('statusDot').className = 'dot ' + (isActive ? 'on' : 'off');
+    document.getElementById('statusText').textContent = isActive ? 'در حال پخش' : 'آماده';
+}
+
+function updateVolume() {
+    var v = parseFloat(document.getElementById('volumeSlider').value);
+    if (gainNode) gainNode.gain.value = v;
+    document.getElementById('volVal').textContent = Math.round(v * 100) + '%';
+}
+
+function updateEcho() {
+    var e = parseFloat(document.getElementById('echoSlider').value);
+    if (echoNode) echoNode.gain.value = e;
+    document.getElementById('echoVal').textContent = e === 0 ? 'خاموش' : Math.round(e * 100) + '%';
+}
+
+function toggleEffect(name) {
+    if (!isActive) return;
+    effects[name] = !effects[name];
+    var btn = document.getElementById('btn' + name.charAt(0).toUpperCase() + name.slice(1));
+    btn.classList.toggle('active', effects[name]);
+    applyEffects();
+}
+
+function applyEffects() {
+    if (!gainNode) return;
+    var g = 1;
+    if (effects.deep) g *= 0.7;
+    if (effects.chipmunk) g *= 1.5;
+    if (effects.robot) g *= 0.5;
+    gainNode.gain.value = g * parseFloat(document.getElementById('volumeSlider').value);
+    
+    if (effects.echo) {
+        echoNode.gain.value = 0.5;
+        document.getElementById('echoSlider').value = 0.5;
+        document.getElementById('echoVal').textContent = '50%';
+    } else {
+        echoNode.gain.value = 0;
+        document.getElementById('echoSlider').value = 0;
+        document.getElementById('echoVal').textContent = 'خاموش';
+    }
+}
+
+function quickFX(type) {
+    if (!isActive) return;
+    document.querySelectorAll('.fx-btn').forEach(function(b){b.classList.remove('active')});
+    effects = {echo:false,robot:false,deep:false,chipmunk:false};
+    
+    if (type === 'concert') { effects.echo = true; effects.deep = true; }
+    if (type === 'radio') { effects.robot = true; }
+    
+    document.querySelectorAll('.ctrl-btn').forEach(function(b){b.classList.remove('active')});
+    if (effects.echo) document.getElementById('btnEcho').classList.add('active');
+    if (effects.robot) document.getElementById('btnRobot').classList.add('active');
+    if (effects.deep) document.getElementById('btnDeep').classList.add('active');
+    if (effects.chipmunk) document.getElementById('btnChipmunk').classList.add('active');
+    
+    document.querySelector('[onclick="quickFX(\''+type+'\')"]').classList.add('active');
+    applyEffects();
+}
+
+function drawWave() {
+    if (!isActive) return;
+    requestAnimationFrame(drawWave);
+    
+    var dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+    analyserNode.getByteTimeDomainData(dataArray);
+    
+    waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+    waveCtx.strokeStyle = '#38bdf8';
+    waveCtx.lineWidth = 2;
+    waveCtx.beginPath();
+    
+    var sliceWidth = waveCanvas.width / analyserNode.frequencyBinCount;
+    var x = 0;
+    for (var i = 0; i < analyserNode.frequencyBinCount; i++) {
+        var v = dataArray[i] / 128;
+        var y = v * waveCanvas.height / 2;
+        if (i === 0) waveCtx.moveTo(x, y);
+        else waveCtx.lineTo(x, y);
+        x += sliceWidth;
+    }
+    waveCtx.stroke();
+    
+    // حجم
+    var sum = dataArray.reduce(function(a,b){return a+Math.abs(b-128)},0);
+    var avg = sum / analyserNode.frequencyBinCount / 128 * 100;
+    document.getElementById('volPercent').textContent = Math.round(avg) + '%';
+}
+
+function drawEQ() {
+    if (!isActive) return;
+    requestAnimationFrame(drawEQ);
+    
+    var dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+    analyserNode.getByteFrequencyData(dataArray);
+    
+    var step = Math.floor(dataArray.length / eqBars.length);
+    for (var i = 0; i < eqBars.length; i++) {
+        var val = dataArray[i * step] / 255;
+        eqBars[i].style.height = Math.max(4, val * 60) + 'px';
+        var hue = 200 - val * 200;
+        eqBars[i].style.background = 'hsl(' + hue + ',80%,50%)';
+    }
+}
+
+updateUI();
+</script>
+</body>
+</html>
