@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>دوربین + نقاشی</title>
+    <title>عکس + نقاشی</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
         body{font-family:Tahoma;background:#0f172a;overflow:hidden;display:flex;flex-direction:column;height:100vh;color:white}
         
-        .header{background:#1e293b;padding:10px 15px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1)}
+        .header{background:#1e293b;padding:10px 15px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1);flex-wrap:wrap;gap:5px}
         .header h1{font-size:1rem;color:#38bdf8}
-        .header button{background:#334155;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem;font-family:Tahoma;margin-left:5px}
+        .header button{background:#334155;color:white;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem;font-family:Tahoma;margin-left:5px;transition:0.2s}
         .header button.active{background:#38bdf8;color:#000}
         .header button.danger{background:#e94560}
+        .header button.green{background:#4ade80;color:#000}
+        .header button.save{background:#fbbf24;color:#000;font-weight:bold}
         
         .main-area{flex:1;position:relative;background:#000;overflow:hidden;display:flex;justify-content:center;align-items:center}
-        video{position:absolute;width:100%;height:100%;object-fit:contain;display:none}
-        img#photoPreview{position:absolute;width:100%;height:100%;object-fit:contain;display:none}
-        canvas#drawCanvas{position:absolute;width:100%;height:100%;z-index:10;cursor:crosshair}
+        canvas#drawCanvas{position:absolute;width:100%;height:100%;z-index:10;cursor:crosshair;touch-action:none}
         
         .controls{bottom:0;width:100%;background:#1e293b;padding:10px;display:flex;flex-direction:column;gap:8px;z-index:20}
         
@@ -25,7 +25,6 @@
         .tools::-webkit-scrollbar{display:none}
         .tool-btn{background:#334155;color:white;border:none;padding:8px 12px;border-radius:8px;font-size:1.2rem;cursor:pointer;transition:0.2s;flex-shrink:0}
         .tool-btn.active{background:#38bdf8;color:#000}
-        .tool-btn.capture{background:#4ade80;color:#000}
         
         .colors{display:flex;gap:6px;overflow-x:auto;padding-bottom:5px;justify-content:center}
         .colors::-webkit-scrollbar{display:none}
@@ -36,33 +35,41 @@
         .sliders label{font-size:0.75rem;color:#94a3b8;white-space:nowrap}
         .sliders input[type=range]{flex:1;accent-color:#38bdf8}
         
-        .msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);padding:15px 25px;border-radius:10px;z-index:30;font-size:0.9rem;text-align:center;display:none}
+        .msg{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);padding:10px 20px;border-radius:10px;z-index:30;font-size:0.85rem;text-align:center;display:none;white-space:nowrap}
         .msg.show{display:block}
+        
+        #fileInput{display:none}
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>📷 دوربین + نقاشی</h1>
+    <h1>🖼️ عکس + نقاشی</h1>
     <div>
-        <button id="btnCamera" onclick="toggleCamera()">روشن کردن دوربین</button>
+        <!-- دکمه انتخاب عکس (مجوز فایل) -->
+        <button class="green" onclick="document.getElementById('fileInput').click()">📁 انتخاب عکس</button>
+        
+        <!-- دکمه‌های ابزار (بعد از انتخاب عکس فعال می‌شن) -->
         <button id="btnUndo" onclick="undo()" style="display:none">↩️</button>
         <button id="btnClear" onclick="clearCanvas()" class="danger" style="display:none">🗑️</button>
+        
+        <!-- دکمه ذخیره (مجوز دانلود) -->
+        <button id="btnSave" class="save" onclick="saveImage()" style="display:none">💾 ذخیره</button>
     </div>
 </div>
 
+<!-- اینپوت فایل، وقتی دکمه بالا زده میشه، پنجره انتخاب فایل باز میشه و مرورگر مجوز می‌خواد -->
+<input type="file" id="fileInput" accept="image/*" onchange="loadImage(event)">
+
 <div class="main-area">
-    <video id="video" autoplay playsinline></video>
-    <img id="photoPreview" alt="عکس گرفته شده">
     <canvas id="drawCanvas"></canvas>
-    <div class="msg" id="msg">لطفاً دسترسی به دوربین را تأیید کنید</div>
+    <div class="msg" id="msg">یک عکس از گالری انتخاب کنید</div>
 </div>
 
 <div class="controls" id="controlsPanel" style="display:none">
     <div class="tools">
         <button class="tool-btn active" data-tool="pen" onclick="setTool('pen')">✏️</button>
         <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')">🧹</button>
-        <button class="tool-btn capture" onclick="takeSnapshot()" title="گرفتن عکس">📸 گرفتن عکس</button>
     </div>
     <div class="colors" id="colorPalette">
         <div class="color-btn active" style="background:#e94560" onclick="setColor(this, '#e94560')"></div>
@@ -80,21 +87,21 @@
 </div>
 
 <script>
-var video = document.getElementById('video');
-var photoPreview = document.getElementById('photoPreview');
 var canvas = document.getElementById('drawCanvas');
 var ctx = canvas.getContext('2d');
 var msg = document.getElementById('msg');
-var stream = null;
+var controls = document.getElementById('controlsPanel');
+var btnUndo = document.getElementById('btnUndo');
+var btnClear = document.getElementById('btnClear');
+var btnSave = document.getElementById('btnSave');
+
 var isDrawing = false;
-var isCameraMode = false;
-var isPhotoMode = false; // آیا عکس گرفته شده و روی عکس نقاشی می‌کنیم؟
 var currentTool = 'pen';
 var currentColor = '#e94560';
 var brushSize = 5;
-var strokes = []; // برای ذخیره خطوط جهت undo
+var strokes = [];
+var loadedImage = null;
 
-// تنظیم اندازه کانواس
 function resizeCanvas() {
     const parent = canvas.parentElement;
     canvas.width = parent.clientWidth;
@@ -103,57 +110,37 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 
-async function toggleCamera() {
-    const btn = document.getElementById('btnCamera');
-    const controls = document.getElementById('controlsPanel');
-    const undoBtn = document.getElementById('btnUndo');
-    const clearBtn = document.getElementById('btnClear');
+// وقتی کاربر عکس انتخاب می‌کنه، این تابع اجرا میشه (مرورگر مجوز فایل رو داده)
+function loadImage(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            loadedImage = img;
+            controls.style.display = 'flex';
+            btnUndo.style.display = 'inline-block';
+            btnClear.style.display = 'inline-block';
+            btnSave.style.display = 'inline-block'; // دکمه ذخیره نمایان میشه
+            msg.classList.remove('show');
+            strokes = [];
+            resizeCanvas();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    event.target.value = ''; 
+}
 
-    if (isCameraMode) {
-        // خاموش کردن دوربین
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            video.srcObject = null;
-        }
-        video.style.display = 'none';
-        photoPreview.style.display = 'none';
-        canvas.style.display = 'none';
-        controls.style.display = 'none';
-        undoBtn.style.display = 'none';
-        clearBtn.style.display = 'none';
-        isCameraMode = false;
-        isPhotoMode = false;
-        btn.textContent = 'روشن کردن دوربین';
-        btn.classList.remove('active');
-        msg.classList.remove('show');
-        return;
-    }
-
-    // روشن کردن دوربین
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' } 
-        });
-        video.srcObject = stream;
-        video.style.display = 'block';
-        photoPreview.style.display = 'none';
-        canvas.style.display = 'block';
-        controls.style.display = 'flex';
-        undoBtn.style.display = 'inline-block';
-        clearBtn.style.display = 'inline-block';
-        isCameraMode = true;
-        isPhotoMode = false;
-        btn.textContent = 'خاموش کردن دوربین';
-        btn.classList.add('active');
-        msg.classList.remove('show');
-        
-        setTimeout(resizeCanvas, 100);
-        clearCanvasData();
-    } catch (err) {
-        msg.textContent = '❌ خطا در دسترسی به دوربین. لطفاً اجازه دسترسی بدهید.';
-        msg.classList.add('show');
-        console.error(err);
-    }
+// ذخیره عکس نهایی (مرورگر برای دانلود مجوز می‌خواد)
+function saveImage() {
+    if (!loadedImage) return;
+    var link = document.createElement('a');
+    link.download = 'my-drawing-' + Date.now() + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
 }
 
 function setTool(tool) {
@@ -168,100 +155,52 @@ function setColor(btn, color) {
     btn.classList.add('active');
 }
 
-// گرفتن عکس از ویدئو و قرار دادن به عنوان پس‌زمینه کانواس
-function takeSnapshot() {
-    if (!isCameraMode || !video.videoWidth) return;
-    
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-    
-    // ذخیره عکس در متغیر برای رندر مجدد
-    photoPreview.src = tempCanvas.toDataURL('image/jpeg');
-    photoPreview.style.display = 'block';
-    video.style.display = 'none';
-    isPhotoMode = true;
-    
-    // ریست کردن کانواس
-    clearCanvasData();
-    // کشیدن عکس روی کانواس پس‌زمینه
-    redrawCanvas();
-    
-    msg.textContent = '✅ عکس گرفته شد! حالا روی آن نقاشی کنید.';
-    msg.classList.add('show');
-    setTimeout(() => msg.classList.remove('show'), 2000);
-}
-
-// رسم مجدد همه چیز
 function redrawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // اگر عکس گرفته شده، اول عکس رو بکش
-    if (isPhotoMode && photoPreview.src) {
-        const img = new Image();
-        img.onload = () => {
-            // محاسبه سایز متناسب با کانواس
-            const canvasRatio = canvas.width / canvas.height;
-            const imgRatio = img.width / img.height;
-            let drawW, drawH, offsetX, offsetY;
+    if (loadedImage) {
+        const canvasRatio = canvas.width / canvas.height;
+        const imgRatio = loadedImage.width / loadedImage.height;
+        let drawW, drawH, offsetX, offsetY;
 
-            if (canvasRatio > imgRatio) {
-                drawH = canvas.height;
-                drawW = img.width * (canvas.height / img.height);
-                offsetX = (canvas.width - drawW) / 2;
-                offsetY = 0;
-            } else {
-                drawW = canvas.width;
-                drawH = img.height * (canvas.width / img.width);
-                offsetX = 0;
-                offsetY = (canvas.height - drawH) / 2;
-            }
-            ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
-            drawStrokes(); // خطوط نقاشی رو بعد از عکس بکش
-        };
-        img.src = photoPreview.src;
-    } else {
-        drawStrokes();
+        if (canvasRatio > imgRatio) {
+            drawH = canvas.height;
+            drawW = loadedImage.width * (canvas.height / loadedImage.height);
+            offsetX = (canvas.width - drawW) / 2;
+            offsetY = 0;
+        } else {
+            drawW = canvas.width;
+            drawH = loadedImage.height * (canvas.width / loadedImage.width);
+            offsetX = 0;
+            offsetY = (canvas.height - drawH) / 2;
+        }
+        ctx.drawImage(loadedImage, offsetX, offsetY, drawW, drawH);
     }
+    
+    drawStrokes();
 }
 
 function drawStrokes() {
     strokes.forEach(stroke => {
+        if (stroke.points.length < 2) return;
         ctx.beginPath();
-        ctx.strokeStyle = stroke.color;
-        ctx.lineWidth = stroke.size;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
         if (stroke.tool === 'eraser') {
             ctx.globalCompositeOperation = 'destination-out';
             ctx.lineWidth = stroke.size * 3;
         } else {
             ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = stroke.color;
+            ctx.lineWidth = stroke.size;
         }
-        
-        if (stroke.points.length > 0) {
-            ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-            for (let i = 1; i < stroke.points.length; i++) {
-                ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-            }
-            ctx.stroke();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+        for (let i = 1; i < stroke.points.length; i++) {
+            ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
         }
+        ctx.stroke();
         ctx.globalCompositeOperation = 'source-over';
     });
-}
-
-function clearCanvasData() {
-    strokes = [];
-    redrawCanvas();
-}
-
-function clearCanvas() {
-    if (confirm('همه نقاشی‌ها پاک شود؟')) {
-        clearCanvasData();
-    }
 }
 
 function undo() {
@@ -271,13 +210,18 @@ function undo() {
     }
 }
 
-// ==== رویدادهای لمسی برای نقاشی ====
+function clearCanvas() {
+    if (confirm('همه نقاشی‌ها پاک شود؟')) {
+        strokes = [];
+        redrawCanvas();
+    }
+}
+
 function getMousePos(e) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     let clientX, clientY;
-    
     if (e.touches && e.touches.length > 0) {
         clientX = e.touches[0].clientX;
         clientY = e.touches[0].clientY;
@@ -285,7 +229,6 @@ function getMousePos(e) {
         clientX = e.clientX;
         clientY = e.clientY;
     }
-    
     return {
         x: (clientX - rect.left) * scaleX,
         y: (clientY - rect.top) * scaleY
@@ -294,20 +237,17 @@ function getMousePos(e) {
 
 canvas.addEventListener('touchstart', handleStart, {passive: false});
 canvas.addEventListener('mousedown', handleStart);
-
 canvas.addEventListener('touchmove', handleMove, {passive: false});
 canvas.addEventListener('mousemove', handleMove);
-
 canvas.addEventListener('touchend', handleEnd);
 canvas.addEventListener('mouseup', handleEnd);
 canvas.addEventListener('mouseleave', handleEnd);
 
 function handleStart(e) {
     e.preventDefault();
-    if (!isCameraMode) return;
+    if (!loadedImage) return;
     isDrawing = true;
     const pos = getMousePos(e);
-    
     const newStroke = {
         tool: currentTool,
         color: currentColor,
@@ -315,8 +255,6 @@ function handleStart(e) {
         points: [pos]
     };
     strokes.push(newStroke);
-    
-    // نقطه اولیه
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, newStroke.size/2, 0, Math.PI*2);
     if (newStroke.tool === 'eraser') {
@@ -331,17 +269,13 @@ function handleStart(e) {
 function handleMove(e) {
     e.preventDefault();
     if (!isDrawing || strokes.length === 0) return;
-    
     const pos = getMousePos(e);
     const currentStroke = strokes[strokes.length - 1];
     currentStroke.points.push(pos);
-    
-    // رسم خط جدید
     ctx.beginPath();
     const prev = currentStroke.points[currentStroke.points.length - 2];
     ctx.moveTo(prev.x, prev.y);
     ctx.lineTo(pos.x, pos.y);
-    
     if (currentStroke.tool === 'eraser') {
         ctx.globalCompositeOperation = 'destination-out';
         ctx.lineWidth = currentStroke.size * 3;
@@ -363,4 +297,4 @@ function handleEnd(e) {
 </script>
 
 </body>
-      </html>
+    </html>
