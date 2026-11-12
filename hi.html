@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 دیاگ کامل دسته بازی — Gamepad Pro Tester</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif}
+:root{
+  --bg:#08080d; --panel:#101018; --panel2:#181822; --border:#22222e;
+  --cyan:#00d2ff; --cyan2:#0090cc; --green:#00ff88; --red:#ff4466;
+  --yellow:#ffcc00; --text:#e8e8f0; --muted:#6a6a7a;
+}
+body{background:radial-gradient(ellipse at top,#10101c,#08080d 70%);color:var(--text);min-height:100vh;padding:12px;display:flex;flex-direction:column;align-items:center}
+
+/* ===== هدر ===== */
+header{width:100%;max-width:1280px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;padding:0 4px}
+h1{color:var(--cyan);font-size:20px;display:flex;align-items:center;gap:8px;text-shadow:0 0 20px #00d2ff44}
+.status-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:bold;display:inline-flex;align-items:center;gap:6px;border:1px solid;transition:all .3s}
+.badge::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.b-on{background:#00ff8815;color:var(--green);border-color:#00ff8844}
+.b-off{background:#ff446615;color:var(--red);border-color:#ff446644}
+.b-xbox{background:#107c1015;color:#6bff6b;border-color:#107c1044}
+.b-ps{background:#00379118;color:#5b9bff;border-color:#00379144}
+.b-bat{background:#ffcc0015;color:var(--yellow);border-color:#ffcc0044}
+.b-bat.low{background:#ff446615;color:var(--red);border-color:#ff446644}
+
+/* ===== Layout ===== */
+.layout{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;max-width:1280px;width:100%}
+@media(max-width:950px){.layout{grid-template-columns:1fr}}
+
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;position:relative;overflow:hidden}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.6}
+.panel h2{font-size:11px;color:var(--cyan);margin-bottom:12px;letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:8px;font-weight:700}
+.panel h2::before{content:'▸';font-size:14px;color:var(--cyan)}
+
+/* ===== SVG دسته ===== */
+.pad-wrap{display:flex;justify-content:center;padding:10px 0;background:radial-gradient(circle at 50% 40%,#181826,#101018);border-radius:12px;margin-bottom:12px}
+.pad-svg{width:100%;max-width:460px;height:auto;filter:drop-shadow(0 10px 30px rgba(0,210,255,.12))}
+.btn-svg{fill:#1a1a28;stroke:#33334a;stroke-width:1.5;transition:all .07s}
+.btn-svg.active{fill:var(--cyan);stroke:var(--cyan);filter:drop-shadow(0 0 10px var(--cyan))}
+.btn-svg.trigger.active{fill:var(--cyan2);stroke:var(--cyan)}
+.stick-base{fill:#0a0a12;stroke:#2a2a3a;stroke-width:2}
+.stick-ring{fill:none;stroke:#1e1e2a;stroke-width:1;stroke-dasharray:3 3}
+.knob{fill:var(--cyan);filter:drop-shadow(0 0 8px var(--cyan));transition:cx .04s,cy .04s}
+.label-svg{fill:var(--muted);font-size:8px;text-anchor:middle;font-family:'Segoe UI',monospace;font-weight:700;pointer-events:none}
+.label-svg.hot{fill:#000}
+
+/* ===== لیست دکمه‌ها ===== */
+.active-list{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px;min-height:60px;max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start}
+.active-list:empty::after{content:'— هیچ دکمه‌ای فشرده نیست —';color:var(--muted);font-size:11px;font-style:italic;width:100%;text-align:center;padding:12px 0}
+.chip{background:#00d2ff22;color:var(--cyan);border:1px solid #00d2ff55;padding:3px 10px;border-radius:12px;font-size:11px;font-family:monospace;font-weight:700;animation:chipIn .15s}
+@keyframes chipIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* ===== آنالوگ ===== */
+.sticks-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stick-card{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center}
+.stick-title{font-size:10px;color:var(--muted);margin-bottom:8px;font-weight:700;letter-spacing:1px}
+.stick-circle{width:110px;height:110px;background:radial-gradient(circle,#0a0a12,#12121e);border:2px solid var(--border);border-radius:50%;position:relative;margin:0 auto;overflow:hidden;box-shadow:inset 0 0 20px #000}
+.stick-circle::before,.stick-circle::after{content:'';position:absolute;background:#1e1e2a}
+.stick-circle::before{width:100%;height:1px;top:50%;left:0}
+.stick-circle::after{width:1px;height:100%;left:50%;top:0}
+.stick-dot{width:16px;height:16px;background:var(--cyan);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 12px var(--cyan);transition:background .2s,box-shadow .2s}
+.stick-dot.dead{background:var(--green);box-shadow:0 0 10px var(--green)}
+.stick-dot.drift{background:var(--red);box-shadow:0 0 14px var(--red);animation:driftPulse 1s infinite}
+@keyframes driftPulse{0%,100%{transform:translate(var(--tx,calc(-50% + 0px)),var(--ty,calc(-50% + 0px))) scale(1)}50%{transform:translate(var(--tx,calc(-50% + 0px)),var(--ty,calc(-50% + 0px))) scale(1.3)}}
+.raw-vals{font-family:monospace;font-size:10px;color:var(--muted);margin-top:8px;direction:ltr;line-height:1.6}
+.raw-vals b{color:var(--cyan);font-weight:700}
+.raw-vals .warn{color:var(--red)}
+
+/* ===== تریگر ===== */
+.trigs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.trig{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px}
+.trig-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:6px;font-family:monospace;font-weight:700}
+.trig-label span:last-child{color:var(--cyan)}
+.trig-bar{height:10px;background:#0a0a12;border-radius:5px;overflow:hidden;border:1px solid var(--border)}
+.trig-fill{height:100%;background:linear-gradient(90deg,var(--cyan2),var(--cyan));width:0%;transition:width .05s;box-shadow:0 0 10px var(--cyan)}
+
+/* ===== کنترل‌ها ===== */
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.ctrl{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px}
+.ctrl label{display:block;color:var(--muted);font-size:10px;margin-bottom:5px;font-weight:700;letter-spacing:.5px}
+.ctrl input{width:100%;background:#0a0a12;border:1px solid var(--border);color:var(--cyan);padding:6px 8px;border-radius:6px;font-family:monospace;font-size:12px}
+.ctrl input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 8px #00d2ff44}
+
+/* ===== دکمه‌ها ===== */
+.btn-row{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover{background:var(--cyan);color:#000;border-color:var(--cyan);transform:translateY(-1px);box-shadow:0 4px 12px #00d2ff44}
+.btn:active{transform:scale(.97)}
+.btn.vibrate{border-color:#00d2ff55;color:var(--cyan)}
+.btn.vibrate:hover{background:var(--cyan);color:#000}
+.btn.warn{border-color:#ff446655;color:var(--red)}
+.btn.warn:hover{background:var(--red);color:#fff}
+
+/* ===== حالت خالی ===== */
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty .icon{font-size:64px;margin-bottom:16px;opacity:.4;animation:float 3s infinite ease-in-out}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.empty h3{color:var(--cyan);margin-bottom:10px;font-size:18px}
+.empty p{font-size:13px;line-height:1.8;max-width:400px;margin:0 auto}
+.empty b{color:var(--cyan)}
+
+/* ===== FPS ===== */
+.fps{position:fixed;bottom:8px;left:8px;background:#000a;color:var(--cyan);font-family:monospace;font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid #00d2ff44}
+
+/* ===== Toast ===== */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--panel);border:1px solid var(--cyan);color:var(--cyan);padding:12px 24px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 10px 40px #00d2ff44;transition:transform .3s;z-index:999;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:var(--red);color:var(--red);box-shadow:0 10px 40px #ff446644}
+
+/* ===== اسکرول‌بار ===== */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--panel)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--cyan2)}
+</style>
+</head>
+<body>
+
+<!-- ===== هدر ===== -->
+<header>
+  <h1><span>🎮</span> دیاگ کامل دسته بازی</h1>
+  <div class="status-row">
+    <span class="badge b-off" id="connBadge">قطع</span>
+    <span class="badge b-off" id="typeBadge">نامشخص</span>
+    <span class="badge b-off" id="batBadge" style="display:none">🔋</span>
+    <span class="badge b-off" id="idBadge" style="display:none;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;font-family:monospace;font-weight:400"></span>
+  </div>
+</header>
+
+<!-- ===== حالت خالی ===== -->
+<div id="emptyState" class="empty">
+  <div class="icon">🔌</div>
+  <h3>دسته‌ای متصل نیست</h3>
+  <p>کابل USB را وصل کنید یا بلوتوث را فعال کنید.<br>سپس <b>یک دکمه از دسته را فشار دهید</b> تا مرورگر آن را شناسایی کند.</p>
+</div>
+
+<!-- ===== Layout اصلی ===== -->
+<div class="layout" id="mainLayout" style="display:none">
+
+  <!-- ============ پنل چپ ============ -->
+  <div class="panel">
+    <h2>نمای دسته (Standard Gamepad Mapping)</h2>
+    
+    <div class="pad-wrap">
+      <svg class="pad-svg" viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg">
+        <!-- بدنه دسته -->
+        <path d="M100,50 Q250,15 400,50 Q465,65 470,130 Q475,200 430,255 Q400,295 360,295 Q320,295 300,265 L265,225 L235,225 L200,265 Q180,295 140,295 Q100,295 70,255 Q25,200 30,130 Q35,65 100,50Z" fill="#14141e" stroke="#2a2a3a" stroke-width="2.5"/>
+        
+        <!-- L2 / R2 -->
+        <rect x="55" y="18" width="65" height="22" rx="6" class="btn-svg trigger" id="svg6"/>
+        <text x="87" y="33" class="label-svg" id="lbl6">L2</text>
+        <rect x="380" y="18" width="65" height="22" rx="6" class="btn-svg trigger" id="svg7"/>
+        <text x="412" y="33" class="label-svg" id="lbl7">R2</text>
+        
+        <!-- L1 / R1 -->
+        <rect x="55" y="46" width="65" height="22" rx="6" class="btn-svg" id="svg4"/>
+        <text x="87" y="61" class="label-svg" id="lbl4">L1</text>
+        <rect x="380" y="46" width="65" height="22" rx="6" class="btn-svg" id="svg5"/>
+        <text x="412" y="61" class="label-svg" id="lbl5">R1</text>
+        
+        <!-- D-Pad -->
+        <rect x="70" y="200" width="20" height="20" rx="3" class="btn-svg" id="svg12"/>
+        <rect x="50" y="220" width="20" height="20" rx="3" class="btn-svg" id="svg14"/>
+        <rect x="90" y="220" width="20" height="20" rx="3" class="btn-svg" id="svg15"/>
+        <rect x="70" y="240" width="20" height="20" rx="3" class="btn-svg" id="svg13"/>
+        <text x="70" y="278" class="label-svg">D-Pad</text>
+        
+        <!-- آنالوگ چپ -->
+        <circle cx="150" cy="160" r="36" class="stick-base"/>
+        <circle cx="150" cy="160" r="30" class="stick-ring"/>
+        <circle cx="150" cy="160" r="14" class="knob" id="knobL"/>
+        <text x="150" y="208" class="label-svg">L-Stick</text>
+        
+        <!-- آنالوگ راست -->
+        <circle cx="350" cy="160" r="36" class="stick-base"/>
+        <circle cx="350" cy="160" r="30" class="stick-ring"/>
+        <circle cx="350" cy="160" r="14" class="knob" id="knobR"/>
+        <text x="350" y="208" class="label-svg">R-Stick</text>
+        
+        <!-- دکمه‌های راست Y/X/B/A -->
+        <circle cx="390" cy="105" r="13" class="btn-svg" id="svg3"/>
+        <text x="390" y="109" class="label-svg" id="lbl3">Y</text>
+        <circle cx="362" cy="133" r="13" class="btn-svg" id="svg2"/>
+        <text x="362" y="137" class="label-svg" id="lbl2">X</text>
+        <circle cx="418" cy="133" r="13" class="btn-svg" id="svg1"/>
+        <text x="418" y="137" class="label-svg" id="lbl1">B</text>
+        <circle cx="390" cy="161" r="13" class="btn-svg" id="svg0"/>
+        <text x="390" y="165" class="label-svg" id="lbl0">A</text>
+        
+        <!-- Select / Start -->
+        <rect x="205" y="130" width="18" height="14" rx="4" class="btn-svg" id="svg8"/>
+        <text x="214" y="160" class="label-svg">⏹</text>
+        <rect x="277" y="130" width="18" height="14" rx="4" class="btn-svg" id="svg9"/>
+        <text x="286" y="160" class="label-svg">▶</text>
+        
+        <!-- L3 / R3 -->
+        <circle cx="150" cy="160" r="5" fill="#2a2a3a" id="l3dot"/>
+        <circle cx="350" cy="160" r="5" fill="#2a2a3a" id="r3dot"/>
+        
+        <!-- Home -->
+        <circle cx="250" cy="80" r="10" class="btn-svg" id="svg16"/>
+        <text x="250" y="84" class="label-svg" id="lbl16">⌂</text>
+      </svg>
+    </div>
+
+    <h2>دکمه‌های فشرده‌شده</h2>
+    <div class="active-list" id="activeList"></div>
+  </div>
+
+  <!-- ============ پنل راست ============ -->
+  <div class="panel">
+    <h2>آنالوگ‌ها</h2>
+    <div class="sticks-grid">
+      <div class="stick-card">
+        <div class="stick-title">CHپ</div>
+        <div class="stick-circle"><div class="stick-dot" id="dotL"></div></div>
+        <div class="raw-vals" id="rawL">X: 0.000<br>Y: 0.000</div>
+      </div>
+      <div class="stick-card">
+        <div class="stick-title">راست</div>
+        <div class="stick-circle"><div class="stick-dot" id="dotR"></div></div>
+        <div class="raw-vals" id="rawR">X: 0.000<br>Y: 0.000</div>
+      </div>
+    </div>
+
+    <h2>تریگرها</h2>
+    <div class="trigs">
+      <div class="trig">
+        <div class="trig-label"><span>L2</span><span id="trigL2val">0.000</span></div>
+        <div class="trig-bar"><div class="trig-fill" id="trigL2"></div></div>
+      </div>
+      <div class="trig">
+        <div class="trig-label"><span>R2</span><span id="trigR2val">0.000</span></div>
+        <div class="trig-bar"><div class="trig-fill" id="trigR2"></div></div>
+      </div>
+    </div>
+
+    <h2>تنظیمات</h2>
+    <div class="controls">
+      <div class="ctrl">
+        <label>آستانهٔ Drift</label>
+        <input type="number" id="driftThreshold" value="0.05" min="0.01" max="0.5" step="0.01">
+      </div>
+      <div class="ctrl">
+        <label>آستانهٔ Deadzone</label>
+        <input type="number" id="deadzoneThreshold" value="0.02" min="0.01" max="0.3" step="0.01">
+      </div>
+    </div>
+
+    <h2>تست لرزش</h2>
+    <div class="btn-row">
+      <button class="btn vibrate" id="btnVibShort">📳 کوتاه</button>
+      <button class="btn vibrate" id="btnVibLong">📳 بلند</button>
+      <button class="btn vibrate" id="btnVibStrong">💥 قوی</button>
+      <button class="btn vibrate" id="btnVibWeak">〰️ ضعیف</button>
+    </div>
+    <div class="controls" style="margin-bottom:10px">
+      <div class="ctrl">
+        <label>شدت قوی (0-1)</label>
+        <input type="number" id="vibStrong" value="1.0" min="0" max="1" step="0.1">
+      </div>
+      <div class="ctrl">
+        <label>شدت ضعیف (0-1)</label>
+        <input type="number" id="vibWeak" value="0.8" min="0" max="1" step="0.1">
+      </div>
+    </div>
+
+    <h2>ابزارها</h2>
+    <div class="btn-row">
+      <button class="btn" id="btnReset">🔄 ریست تنظیمات</button>
+      <button class="btn" id="btnFullscreen">⛶ تمام‌صفحه</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="fps" id="fps">-- fps</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// ابزارهای کمکی
+// ============================================================
+const $ = id => document.getElementById(id);
+const BTN_NAMES = {
+  0:'A',1:'B',2:'X',3:'Y',4:'L1',5:'R1',6:'L2',7:'R2',
+  8:'Select',9:'Start',10:'L3',11:'R3',
+  12:'D-Up',13:'D-Down',14:'D-Left',15:'D-Right',16:'Home'
+};
+
+function showToast(msg, isError=false){
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function detectPad(id){
+  const s = (id||'').toLowerCase();
+  if(s.includes('dualsense') || s.includes('ps5')) return {n:'PS5 DualSense', c:'b-ps'};
+  if(s.includes('dualshock') || s.includes('ps4') || s.includes('playstation') || s.includes('sony')) 
+    return {n:'PlayStation', c:'b-ps'};
+  if(s.includes('xbox') || s.includes('xinput')) return {n:'Xbox', c:'b-xbox'};
+  return {n:'Generic', c:'b-off'};
+}
+
+function getPad(){
+  const pads = navigator.getGamepads();
+  for(let i=0; i<pads.length; i++) if(pads[i]) return pads[i];
+  return null;
+}
+
+// خواندن مقدار تریگر با fallback
+function trigValue(btn){
+  if(!btn) return 0;
+  if(typeof btn.value === 'number' && btn.value > 0) return btn.value;
+  return btn.pressed ? 1 : 0;
+}
+
+// ============================================================
+// لرزش (Vibration)
+// ============================================================
+function canVibrate(pad){
+  return pad && pad.vibrationActuator && 
+         typeof pad.vibrationActuator.playEffect === 'function';
+}
+
+function vibrate(pad, duration=300, strong=1.0, weak=0.8){
+  if(!pad){
+    showToast('دسته‌ای متصل نیست', true);
+    return;
+  }
+  if(!canVibrate(pad)){
+    showToast('لرزش در این مرورگر/دسته پشتیبانی نمی‌شود', true);
+    return;
+  }
+  
+  // بررسی پشتیبانی افکت dual-rumble
+  const effects = pad.vibrationActuator.effects;
+  if(effects && !effects.includes('dual-rumble')){
+    showToast('افکت dual-rumble پشتیبانی نمی‌شود', true);
+    return;
+  }
+  
+  pad.vibrationActuator.playEffect('dual-rumble', {
+    startDelay: 0,
+    duration: duration,
+    strongMagnitude: Math.max(0, Math.min(1, strong)),
+    weakMagnitude: Math.max(0, Math.min(1, weak))
+  }).then(() => {
+    // موفق
+  }).catch(err => {
+    console.error('vibration error:', err);
+    showToast('خطا در لرزش: ' + err.message, true);
+  });
+  
+  showToast(`📳 لرزش ${duration}ms اجرا شد`);
+}
+
+// ============================================================
+// حلقه اصلی
+// ============================================================
+let frameCount = 0;
+let lastFpsTime = performance.now();
+let lastAPressed = false;
+let lastBPressed = false;
+
+function update(){
+  const pad = getPad();
+  const main = $('mainLayout');
+  const empty = $('emptyState');
+  
+  // ---------- قطع ----------
+  if(!pad){
+    $('connBadge').className = 'badge b-off';
+    $('connBadge').textContent = 'قطع';
+    $('typeBadge').className = 'badge b-off';
+    $('typeBadge').textContent = 'نامشخص';
+    $('idBadge').style.display = 'none';
+    $('batBadge').style.display = 'none';
+    main.style.display = 'none';
+    empty.style.display = 'block';
+    requestAnimationFrame(update);
+    return;
+  }
+  
+  // ---------- متصل ----------
+  $('connBadge').className = 'badge b-on';
+  $('connBadge').textContent = 'متصل';
+  
+  const type = detectPad(pad.id);
+  $('typeBadge').className = 'badge ' + type.c;
+  $('typeBadge').textContent = type.n;
+  
+  $('idBadge').style.display = 'inline-flex';
+  $('idBadge').textContent = pad.id;
+  
+  // باتری
+  if(pad.battery && pad.battery.level != null){
+    const pct = Math.round(pad.battery.level * 100);
+    $('batBadge').style.display = 'inline-flex';
+    $('batBadge').className = 'badge b-bat' + (pct < 20 ? ' low' : '');
+    $('batBadge').textContent = `🔋 ${pct}%${pad.battery.charging ? ' ⚡' : ''}`;
+  } else {
+    $('batBadge').style.display = 'none';
+  }
+  
+  main.style.display = 'grid';
+  empty.style.display = 'none';
+  
+  // ---------- دکمه‌ها در SVG ----------
+  const activeNames = [];
+  for(let i=0; i<=16; i++){
+    const el = $('svg' + i);
+    if(!el) continue;
+    const btn = pad.buttons[i];
+    if(!btn) continue;
+    
+    const pressed = btn.pressed || ((i === 6 || i === 7) && trigValue(btn) > 0.1);
+    el.classList.toggle('active', pressed);
+    
+    // رنگ متن
+    const lbl = $('lbl' + i);
+    if(lbl) lbl.classList.toggle('hot', pressed);
+    
+    if(pressed && BTN_NAMES[i]) activeNames.push(BTN_NAMES[i]);
+  }
+  
+  // L3 / R3
+  $('l3dot').setAttribute('fill', pad.buttons[10] && pad.buttons[10].pressed ? '#00d2ff' : '#2a2a3a');
+  $('r3dot').setAttribute('fill', pad.buttons[11] && pad.buttons[11].pressed ? '#00d2ff' : '#2a2a3a');
+  
+  // ---------- آنالوگ‌ها ----------
+  const lx = pad.axes[0] || 0;
+  const ly = pad.axes[1] || 0;
+  const rx = pad.axes[2] || 0;
+  const ry = pad.axes[3] || 0;
+  
+  const R_SVG = 26;
+  const R_DOT = 44;
+  
+  $('knobL').setAttribute('cx', 150 + lx * R_SVG);
+  $('knobL').setAttribute('cy', 160 + ly * R_SVG);
+  $('knobR').setAttribute('cx', 350 + rx * R_SVG);
+  $('knobR').setAttribute('cy', 160 + ry * R_SVG);
+  
+  // آستانه‌ها
+  const driftT = parseFloat($('driftThreshold').value) || 0.05;
+  const dzT = parseFloat($('deadzoneThreshold').value) || 0.02;
+  
+  const magL = Math.hypot(lx, ly);
+  const magR = Math.hypot(rx, ry);
+  
+  function stateOf(mag){
+    if(mag < dzT) return 'dead';
+    if(mag > driftT) return 'drift';
+    return '';
+  }
+  
+  const dotL = $('dotL');
+  const dotR = $('dotR');
+  
+  dotL.style.setProperty('--tx', `calc(-50% + ${lx * R_DOT}px)`);
+  dotL.style.setProperty('--ty', `calc(-50% + ${ly * R_DOT}px)`);
+  dotL.style.transform = `translate(calc(-50% + ${lx * R_DOT}px), calc(-50% + ${ly * R_DOT}px))`;
+  dotL.className = 'stick-dot ' + stateOf(magL);
+  
+  dotR.style.setProperty('--tx', `calc(-50% + ${rx * R_DOT}px)`);
+  dotR.style.setProperty('--ty', `calc(-50% + ${ry * R_DOT}px)`);
+  dotR.style.transform = `translate(calc(-50% + ${rx * R_DOT}px), calc(-50% + ${ry * R_DOT}px))`;
+  dotR.className = 'stick-dot ' + stateOf(magR);
+  
+  // مقادیر عددی
+  const fmt = v => (v >= 0 ? ' ' : '') + v.toFixed(3);
+  const warnL = stateOf(magL) === 'drift';
+  const warnR = stateOf(magR) === 'drift';
+  
+  $('rawL').innerHTML = 
+    `X: <b class="${warnL?'warn':''}">${fmt(lx)}</b><br>` +
+    `Y: <b class="${warnL?'warn':''}">${fmt(ly)}</b>`;
+  $('rawR').innerHTML = 
+    `X: <b class="${warnR?'warn':''}">${fmt(rx)}</b><br>` +
+    `Y: <b class="${warnR?'warn':''}">${fmt(ry)}</b>`;
+  
+  // ---------- تریگرها ----------
+  const l2 = trigValue(pad.buttons[6]);
+  const r2 = trigValue(pad.buttons[7]);
+  
+  $('trigL2').style.width = (l2 * 100) + '%';
+  $('trigR2').style.width = (r2 * 100) + '%';
+  $('trigL2val').textContent = l2.toFixed(3);
+  $('trigR2val').textContent = r2.toFixed(3);
+  
+  // ---------- لیست دکمه‌های فعال ----------
+  const list = $('activeList');
+  if(activeNames.length){
+    list.innerHTML = activeNames.map(n => `<span class="chip">${n}</span>`).join('');
+  } else {
+    list.innerHTML = '';
+  }
+  
+  // ---------- لرزش خودکار روی دکمه A ----------
+  const aPressed = pad.buttons[0] && pad.buttons[0].pressed;
+  if(aPressed && !lastAPressed && canVibrate(pad)){
+    vibrate(pad, 80, 0.5, 0.3);
+  }
+  lastAPressed = aPressed;
+  
+  // ---------- FPS ----------
+  frameCount++;
+  const now = performance.now();
+  if(now - lastFpsTime >= 1000){
+    $('fps').textContent = `${frameCount} fps`;
+    frameCount = 0;
+    lastFpsTime = now;
+  }
+  
+  requestAnimationFrame(update);
+}
+
+// ============================================================
+// رویدادها
+// ============================================================
+
+// لرزش کوتاه
+$('btnVibShort').addEventListener('click', () => {
+  vibrate(getPad(), 150, 1.0, 0.6);
+});
+
+// لرزش بلند
+$('btnVibLong').addEventListener('click', () => {
+  vibrate(getPad(), 800, 1.0, 0.8);
+});
+
+// لرزش قوی
+$('btnVibStrong').addEventListener('click', () => {
+  const s = parseFloat($('vibStrong').value) || 1.0;
+  const w = parseFloat($('vibWeak').value) || 0.8;
+  vibrate(getPad(), 500, s, w);
+});
+
+// لرزش ضعیف
+$('btnVibWeak').addEventListener('click', () => {
+  vibrate(getPad(), 500, 0.2, 0.1);
+});
+
+// ریست
+$('btnReset').addEventListener('click', () => {
+  $('driftThreshold').value = '0.05';
+  $('deadzoneThreshold').value = '0.02';
+  $('vibStrong').value = '1.0';
+  $('vibWeak').value = '0.8';
+  showToast('تنظیمات ریست شد');
+});
+
+// تمام‌صفحه
+$('btnFullscreen').addEventListener('click', () => {
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(() => {
+      showToast('تمام‌صفحه در این مرورگر ممکن نیست', true);
+    });
+  } else {
+    document.exitFullscreen();
+  }
+});
+
+// رویدادهای اتصال
+window.addEventListener('gamepadconnected', e => {
+  console.log('✅ دسته متصل شد:', e.gamepad);
+  showToast('✅ دسته متصل شد: ' + detectPad(e.gamepad.id).n);
+});
+
+window.addEventListener('gamepaddisconnected', e => {
+  console.log('❌ دسته قطع شد:', e.gamepad);
+  showToast('❌ دسته قطع شد', true);
+});
+
+// شروع
+requestAnimationFrame(update);
+</script>
+</body>
+</html>
